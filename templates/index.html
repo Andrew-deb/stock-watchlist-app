@@ -850,128 +850,7 @@
       container.innerHTML = movers.map(mover => {
         const changeClass = mover.change_percent >= 0 ? 'positive' : 'negative';
         const changeSymbol = mover.change_percent >= 0 ? '↑' : '↓';
-        const price = mover.current_price ? '
-        
-        return `
-          <div class="mover-item" onclick="openStockModal('${mover.symbol}')">
-            <span class="mover-symbol">${mover.symbol}</span>
-            <span class="mover-price">${price}</span>
-            <span class="mover-change ${changeClass}">${changeSymbol} ${changePercent}</span>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function showGainers() {
-      currentMoverType = 'gainers';
-      document.getElementById('gainers-tab').classList.add('active');
-      document.getElementById('losers-tab').classList.remove('active');
-      loadMarketMovers('gainers');
-    }
-
-    function showLosers() {
-      currentMoverType = 'losers';
-      document.getElementById('losers-tab').classList.add('active');
-      document.getElementById('gainers-tab').classList.remove('active');
-      loadMarketMovers('losers');
-    }
-
-    // ========== STOCK MODAL & CHART FUNCTIONALITY ==========
-    let currentChart = null;
-
-    async function openStockModal(symbol) {
-      const modal = document.getElementById('stock-modal');
-      document.getElementById('modal-symbol').textContent = symbol;
-      modal.classList.add('show');
-      
-      // Load chart data
-      await loadStockChart(symbol);
-    }
-
-    function closeModal() {
-      const modal = document.getElementById('stock-modal');
-      modal.classList.remove('show');
-      
-      // Destroy chart to free memory
-      if (currentChart) {
-        currentChart.destroy();
-        currentChart = null;
-      }
-    }
-
-    async function loadStockChart(symbol) {
-      try {
-        const resp = await fetch(`/api/historical/${symbol}?days=30`);
-        const data = await resp.json();
-        
-        if (!resp.ok || !data.labels || data.labels.length === 0) {
-          document.getElementById('modal-details').innerHTML = '<p style="color: #dc3545;">No chart data available</p>';
-          return;
-        }
-        
-        // Destroy previous chart
-        if (currentChart) {
-          currentChart.destroy();
-        }
-        
-        // Create new chart
-        const ctx = document.getElementById('price-chart').getContext('2d');
-        currentChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.labels,
-            datasets: data.datasets
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top'
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: false,
-                ticks: {
-                  callback: function(value) {
-                    return '
-  </script>
-</body>
-</html>
- + value.toFixed(2);
-                  }
-                }
-              }
-            }
-          }
-        });
-      } catch (err) {
-        console.error('Failed to load chart:', err);
-        document.getElementById('modal-details').innerHTML = '<p style="color: #dc3545;">Failed to load chart data</p>';
-      }
-    }
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-      const modal = document.getElementById('stock-modal');
-      if (event.target === modal) {
-        closeModal();
-      }
-    };
-
-    // Initialize
-    loadWatchlist();
-    loadMarketMovers('gainers');
-  </script>
-</body>
-</html>
- + Number(mover.current_price).toFixed(2) : '-';
+        const price = mover.current_price ? '$' + Number(mover.current_price).toFixed(2) : '-';
         const changePercent = mover.change_percent ? Number(mover.change_percent).toFixed(2) + '%' : '-';
         
         return `
@@ -1062,11 +941,7 @@
                 beginAtZero: false,
                 ticks: {
                   callback: function(value) {
-                    return '
-  </script>
-</body>
-</html>
- + value.toFixed(2);
+                    return '$' + value.toFixed(2);
                   }
                 }
               }
