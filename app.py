@@ -20,6 +20,11 @@ from flask import Flask, jsonify, render_template, request
 import lakebase
 from massive_client import MassiveClient
 
+# Import service layer for enhanced features
+from services.stock_service import StockService
+from services.market_service import MarketService
+from services.chart_service import ChartService
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("massive-app")
 
@@ -279,6 +284,100 @@ def _upsert_batch(items: list[dict]) -> int:
                 count += 1
             conn.commit()
     return count
+
+
+# ========== ENHANCED API ENDPOINTS (Phase 1) ==========
+
+@app.route("/api/historical/<symbol>")
+def get_historical(symbol):
+    """Get historical price data for charts."""
+    try:
+        days = int(request.args.get('days', 30))
+        timespan = request.args.get('timespan', 'day')
+        
+        chart_service = ChartService()
+        data = chart_service.get_historical_chart_data(symbol, timespan=timespan, days_back=days)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception(f"Error fetching historical data for {symbol}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/company/<symbol>")
+def get_company(symbol):
+    """Get company details."""
+    try:
+        stock_service = StockService()
+        data = stock_service.get_company_details(symbol)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception(f"Error fetching company details for {symbol}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/snapshot/<symbol>")
+def get_snapshot(symbol):
+    """Get real-time snapshot."""
+    try:
+        stock_service = StockService()
+        data = stock_service.get_snapshot(symbol)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception(f"Error fetching snapshot for {symbol}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/news")
+def get_news():
+    """Get market or stock-specific news."""
+    try:
+        symbol = request.args.get('symbol')
+        limit = int(request.args.get('limit', 10))
+        
+        market_service = MarketService()
+        data = market_service.get_market_news(symbol=symbol, limit=limit)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception("Error fetching news")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/movers/gainers")
+def get_gainers():
+    """Get top gaining stocks."""
+    try:
+        limit = int(request.args.get('limit', 20))
+        market_service = MarketService()
+        data = market_service.get_market_gainers(limit=limit)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception("Error fetching market gainers")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/movers/losers")
+def get_losers():
+    """Get top losing stocks."""
+    try:
+        limit = int(request.args.get('limit', 20))
+        market_service = MarketService()
+        data = market_service.get_market_losers(limit=limit)
+        return jsonify(data)
+    except Exception as e:
+        logger.exception("Error fetching market losers")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/market/overview")
+def get_market_overview():
+    """Get combined market overview with gainers, losers, and news."""
+    try:
+        market_service = MarketService()
+        data = market_service.get_market_overview()
+        return jsonify(data)
+    except Exception as e:
+        logger.exception("Error fetching market overview")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':

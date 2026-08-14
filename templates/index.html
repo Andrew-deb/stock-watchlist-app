@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stock Watchlist - MVP</title>
+  <title>Stock Watchlist - Enhanced</title>
+  <!-- Chart.js for interactive charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -322,6 +324,153 @@
       }
     }
     
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal.show {
+      display: block;
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .modal-header {
+      padding: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    
+    .close {
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+    
+    .close:hover {
+      opacity: 0.7;
+    }
+    
+    .modal-body {
+      padding: 24px;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 24px;
+    }
+    
+    /* Market Movers Styles */
+    .market-movers {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .market-movers h3 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: #667eea;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .tab-btn {
+      padding: 8px 16px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+    }
+    
+    .movers-list {
+      display: grid;
+      gap: 8px;
+    }
+    
+    .mover-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .mover-item:hover {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .mover-symbol {
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .mover-price {
+      font-weight: 600;
+    }
+    
+    .mover-change {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    
+    .mover-change.positive {
+      color: #28a745;
+      background: #d4edda;
+    }
+    
+    .mover-change.negative {
+      color: #dc3545;
+      background: #f8d7da;
+    }
+    
     @media (max-width: 768px) {
       .content {
         padding: 20px;
@@ -376,6 +525,21 @@
 
       <div id="alert-container"></div>
 
+      <!-- Market Movers Section -->
+      <div class="market-movers">
+        <h3>📊 Market Movers</h3>
+        <div class="tabs">
+          <button class="tab-btn active" id="gainers-tab" onclick="showGainers()">Top Gainers</button>
+          <button class="tab-btn" id="losers-tab" onclick="showLosers()">Top Losers</button>
+        </div>
+        <div id="movers-list" class="movers-list">
+          <div style="text-align: center; padding: 20px; color: #6c757d;">
+            <div class="loading"></div>
+            <p>Loading market movers...</p>
+          </div>
+        </div>
+      </div>
+
       <div class="stats">
         <div class="stat-card">
           <div class="stat-label">Total Stocks</div>
@@ -418,6 +582,22 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Detail Modal -->
+  <div id="stock-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-symbol">AAPL</h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="chart-container">
+          <canvas id="price-chart"></canvas>
+        </div>
+        <div id="modal-details"></div>
       </div>
     </div>
   </div>
@@ -501,11 +681,11 @@
         
         return `
           <tr>
-            <td class="symbol-cell">${row.symbol}</td>
-            <td class="price-cell">$${price}</td>
+            <td class="symbol-cell" style="cursor: pointer;" onclick="openStockModal('${row.symbol}')">${row.symbol}</td>
+            <td class="price-cell">${price}</td>
             <td>${updated}</td>
             <td>
-              <button class="btn btn-danger" onclick="deleteStock('${row.symbol}')">
+              <button class="btn btn-danger" onclick="deleteStock('${row.symbol}'); event.stopPropagation();">
                 Delete
               </button>
             </td>
@@ -635,8 +815,164 @@
       });
     });
 
+    // ========== MARKET MOVERS FUNCTIONALITY ==========
+    let currentMoverType = 'gainers';
+
+    async function loadMarketMovers(type = 'gainers') {
+      try {
+        const endpoint = type === 'gainers' ? '/api/movers/gainers' : '/api/movers/losers';
+        const resp = await fetch(endpoint + '?limit=10');
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          throw new Error(data.error || resp.statusText);
+        }
+        
+        renderMarketMovers(data.movers || []);
+      } catch (err) {
+        console.error('Failed to load market movers:', err);
+        document.getElementById('movers-list').innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #dc3545;">
+            <p>Failed to load market movers</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderMarketMovers(movers) {
+      const container = document.getElementById('movers-list');
+      
+      if (!movers || movers.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 20px; color: #6c757d;">No data available</div>';
+        return;
+      }
+      
+      container.innerHTML = movers.map(mover => {
+        const changeClass = mover.change_percent >= 0 ? 'positive' : 'negative';
+        const changeSymbol = mover.change_percent >= 0 ? '↑' : '↓';
+        const price = mover.current_price ? '
+  </script>
+</body>
+</html>
+ + Number(mover.current_price).toFixed(2) : '-';
+        const changePercent = mover.change_percent ? Number(mover.change_percent).toFixed(2) + '%' : '-';
+        
+        return `
+          <div class="mover-item" onclick="openStockModal('${mover.symbol}')">
+            <span class="mover-symbol">${mover.symbol}</span>
+            <span class="mover-price">${price}</span>
+            <span class="mover-change ${changeClass}">${changeSymbol} ${changePercent}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showGainers() {
+      currentMoverType = 'gainers';
+      document.getElementById('gainers-tab').classList.add('active');
+      document.getElementById('losers-tab').classList.remove('active');
+      loadMarketMovers('gainers');
+    }
+
+    function showLosers() {
+      currentMoverType = 'losers';
+      document.getElementById('losers-tab').classList.add('active');
+      document.getElementById('gainers-tab').classList.remove('active');
+      loadMarketMovers('losers');
+    }
+
+    // ========== STOCK MODAL & CHART FUNCTIONALITY ==========
+    let currentChart = null;
+
+    async function openStockModal(symbol) {
+      const modal = document.getElementById('stock-modal');
+      document.getElementById('modal-symbol').textContent = symbol;
+      modal.classList.add('show');
+      
+      // Load chart data
+      await loadStockChart(symbol);
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('stock-modal');
+      modal.classList.remove('show');
+      
+      // Destroy chart to free memory
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+      }
+    }
+
+    async function loadStockChart(symbol) {
+      try {
+        const resp = await fetch(`/api/historical/${symbol}?days=30`);
+        const data = await resp.json();
+        
+        if (!resp.ok || !data.labels || data.labels.length === 0) {
+          document.getElementById('modal-details').innerHTML = '<p style="color: #dc3545;">No chart data available</p>';
+          return;
+        }
+        
+        // Destroy previous chart
+        if (currentChart) {
+          currentChart.destroy();
+        }
+        
+        // Create new chart
+        const ctx = document.getElementById('price-chart').getContext('2d');
+        currentChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.labels,
+            datasets: data.datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                ticks: {
+                  callback: function(value) {
+                    return '
+  </script>
+</body>
+</html>
+ + value.toFixed(2);
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Failed to load chart:', err);
+        document.getElementById('modal-details').innerHTML = '<p style="color: #dc3545;">Failed to load chart data</p>';
+      }
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('stock-modal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    };
+
     // Initialize
     loadWatchlist();
+    loadMarketMovers('gainers');
   </script>
 </body>
 </html>
