@@ -7,7 +7,7 @@ This service focuses on operations related to the entire market, not individual 
 import logging
 from typing import Dict, Any, List, Optional
 
-from massive_client_enhanced import MassiveClient
+from massive_client import MassiveClient
 
 logger = logging.getLogger(__name__)
 

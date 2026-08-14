@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from massive_client_enhanced import MassiveClient
+from massive_client import MassiveClient
 
 logger = logging.getLogger(__name__)
 

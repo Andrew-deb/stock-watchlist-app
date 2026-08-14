@@ -7,7 +7,7 @@ This service focuses on operations related to a single stock symbol.
 import logging
 from typing import Dict, Any, Optional
 
-from massive_client_enhanced import MassiveClient
+from massive_client import MassiveClient
 
 logger = logging.getLogger(__name__)
 
